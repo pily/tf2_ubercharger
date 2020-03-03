@@ -59,7 +59,9 @@ new Handle:g_ChargeTimer2 = INVALID_HANDLE;
 new Handle:g_ChargeTimer3 = INVALID_HANDLE;
 new Handle:g_EnablePing = INVALID_HANDLE;
 new Handle:g_PingTimer = INVALID_HANDLE;
-new Handle:g_TimerHandle = INVALID_HANDLE;
+new Handle:g_TimerHandle1 = INVALID_HANDLE;
+new Handle:g_TimerHandle2 = INVALID_HANDLE;
+new Handle:g_TimerHandle3 = INVALID_HANDLE;
 new bool:ConfigsExecuted = false;
 new bool:NativeControl = false;
 new bool:NativeMedicEnabled[MAXPLAYERS + 1] = { false, ...};
@@ -141,8 +143,12 @@ public OnConfigsExecuted()
 {
     if (NativeControl || GetConVarBool(g_IsUberchargerOn))
     {
-        if (g_TimerHandle == INVALID_HANDLE)
-            g_TimerHandle = CreateTimer(CalcDelay(), Medic_Timer, _, TIMER_REPEAT);
+        if (g_TimerHandle1 == INVALID_HANDLE)
+            g_TimerHandle1 = CreateTimer(CalcDelay1(), Medic_Timer1, _, TIMER_REPEAT);
+        if (g_TimerHandle2 == INVALID_HANDLE)
+            g_TimerHandle2 = CreateTimer(CalcDelay2(), Medic_Timer2, _, TIMER_REPEAT);
+        if (g_TimerHandle3 == INVALID_HANDLE)
+            g_TimerHandle3 = CreateTimer(CalcDelay3(), Medic_Timer3, _, TIMER_REPEAT);
     }
 
     ConfigsExecuted = true;
@@ -164,10 +170,20 @@ public OnMapStart()
 
 public OnMapEnd()
 {
-    if (g_TimerHandle != INVALID_HANDLE)
+    if (g_TimerHandle1 != INVALID_HANDLE)
     {
-        KillTimer(g_TimerHandle);
-        g_TimerHandle = INVALID_HANDLE;
+        KillTimer(g_TimerHandle1);
+        g_TimerHandle1 = INVALID_HANDLE;
+    }
+    if (g_TimerHandle2 != INVALID_HANDLE)
+    {
+        KillTimer(g_TimerHandle2);
+        g_TimerHandle2 = INVALID_HANDLE;
+    }
+    if (g_TimerHandle3 != INVALID_HANDLE)
+    {
+        KillTimer(g_TimerHandle3);
+        g_TimerHandle3 = INVALID_HANDLE;
     }
 }
 
@@ -191,7 +207,7 @@ public Action:Timer_Advert(Handle:timer, any:client)
     }
 }
 
-public Action:Medic_Timer(Handle:timer, any:value)
+public Action:Medic_Timer1(Handle:timer, any:value)
 {
     if (!NativeControl && !GetConVarBool(g_IsUberchargerOn))
         return;
@@ -272,7 +288,54 @@ public Action:Medic_Timer(Handle:timer, any:value)
                                         }
                                     }
                                 }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
+public Action:Medic_Timer2(Handle:timer, any:value)
+{
+    if (!NativeControl && !GetConVarBool(g_IsUberchargerOn))
+        return;
+
+    new Float:gameTime = GetGameTime();
+    new bool:charge    = (gameTime - g_lastChargeTime >= g_ChargeDelay);
+    new bool:beacon    = (gameTime - g_lastBeaconTime >= g_BeaconDelay);
+    new bool:ping      = (gameTime - g_lastPingTime >= g_PingDelay);
+
+    if (charge)
+        g_lastChargeTime = gameTime;
+
+    if (beacon)
+        g_lastBeaconTime = gameTime;
+
+    if (ping)
+        g_lastPingTime = gameTime;
+
+    for (new client = 1; client <= MaxClients; client++)
+    {
+        if (!NativeControl || NativeMedicEnabled[client])
+        {
+            if (IsClientInGame(client) && IsPlayerAlive(client))
+            {
+                new team = GetClientTeam(client);
+                if (team >= 2 && team <= 3)
+                {
+                    if (TF2_GetPlayerClass(client) == TFClass_Medic)
+                    {
+                        
+                        decl String:classname[64];
+                        GetCurrentWeaponClass(client, classname, sizeof(classname));
+                        if (StrEqual(classname, "CWeaponMedigun"))
+                        {
+                            new m_nPlayerCond = FindSendPropInfo("CTFPlayer","m_nPlayerCond") ;
+                            new cond = GetEntData(client, m_nPlayerCond, sizeof(m_nPlayerCond)); // status is not ubered
+                            if(cond != 32)
+                            {
                                 if (GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 411)
                                 {
                                     new Float:UberCharge = TF2_GetUberLevel(client);
@@ -302,7 +365,54 @@ public Action:Medic_Timer(Handle:timer, any:value)
                                         }
                                     }
                                 }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
+public Action:Medic_Timer3(Handle:timer, any:value)
+{
+    if (!NativeControl && !GetConVarBool(g_IsUberchargerOn))
+        return;
+
+    new Float:gameTime = GetGameTime();
+    new bool:charge    = (gameTime - g_lastChargeTime >= g_ChargeDelay);
+    new bool:beacon    = (gameTime - g_lastBeaconTime >= g_BeaconDelay);
+    new bool:ping      = (gameTime - g_lastPingTime >= g_PingDelay);
+
+    if (charge)
+        g_lastChargeTime = gameTime;
+
+    if (beacon)
+        g_lastBeaconTime = gameTime;
+
+    if (ping)
+        g_lastPingTime = gameTime;
+
+    for (new client = 1; client <= MaxClients; client++)
+    {
+        if (!NativeControl || NativeMedicEnabled[client])
+        {
+            if (IsClientInGame(client) && IsPlayerAlive(client))
+            {
+                new team = GetClientTeam(client);
+                if (team >= 2 && team <= 3)
+                {
+                    if (TF2_GetPlayerClass(client) == TFClass_Medic)
+                    {
+                        
+                        decl String:classname[64];
+                        GetCurrentWeaponClass(client, classname, sizeof(classname));
+                        if (StrEqual(classname, "CWeaponMedigun"))
+                        {
+                            new m_nPlayerCond = FindSendPropInfo("CTFPlayer","m_nPlayerCond") ;
+                            new cond = GetEntData(client, m_nPlayerCond, sizeof(m_nPlayerCond)); // status is not ubered
+                            if(cond != 32)
+                            {
                                 if (GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 998)
                                 {
                                     new Float:UberCharge = TF2_GetUberLevel(client);
@@ -374,49 +484,39 @@ BeaconPing(client,bool:ping)
     }
 }
 
-Float:CalcDelay()
+Float:CalcDelay1()
 {
-    for (new client = 1; client <= MaxClients; client++)
-    {
-       
-        if (TF2_GetPlayerClass(client) == TFClass_Medic)
-        {
-            
-            decl String:classname[64];
-            GetCurrentWeaponClass(client, classname, sizeof(classname));
-            if (StrEqual(classname, "CWeaponMedigun"))
-            {
-                new weapon = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
-                if (GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 29 || GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 211 
-                || GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 663 || GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 796
-                || GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 805 || GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 885
-                || GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 894 || GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 903
-                || GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 912 || GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 961
-                || GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 970 || GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 15008
-                || GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 15010 || GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 15025
-                || GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 15039 || GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 15050
-                || GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 15078 || GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 15097
-                || GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 15120 || GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 15121
-                || GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 15122 || GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 15145
-                || GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 15146)
-                {
-                    g_ChargeDelay = GetConVarFloat(g_ChargeTimer1);
-                }
+    g_ChargeDelay = GetConVarFloat(g_ChargeTimer1);
+    g_BeaconDelay = GetConVarFloat(g_BeaconTimer);
+    g_PingDelay = GetConVarFloat(g_PingTimer);
 
-                if (GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 411)
-                {
-                    g_ChargeDelay = GetConVarFloat(g_ChargeTimer2);
-                }
+    new Float:delay = g_ChargeDelay;
+    if (delay > g_BeaconDelay)
+        delay = g_BeaconDelay;
+    if (delay > g_PingDelay)
+        delay = g_PingDelay;
 
-                if (GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 998)
-                {
-                    g_ChargeDelay = GetConVarFloat(g_ChargeTimer3);
-                }
+    return delay;
+}
 
-            }
-            
-        }
-    }
+Float:CalcDelay2()
+{
+    g_ChargeDelay = GetConVarFloat(g_ChargeTimer2);
+    g_BeaconDelay = GetConVarFloat(g_BeaconTimer);
+    g_PingDelay = GetConVarFloat(g_PingTimer);
+
+    new Float:delay = g_ChargeDelay;
+    if (delay > g_BeaconDelay)
+        delay = g_BeaconDelay;
+    if (delay > g_PingDelay)
+        delay = g_PingDelay;
+
+    return delay;
+}
+
+Float:CalcDelay3()
+{
+    g_ChargeDelay = GetConVarFloat(g_ChargeTimer3);
     g_BeaconDelay = GetConVarFloat(g_BeaconTimer);
     g_PingDelay = GetConVarFloat(g_PingTimer);
 
@@ -433,8 +533,12 @@ public Native_ControlUberCharger(Handle:plugin,numParams)
 {
     NativeControl = GetNativeCell(1);
 
-    if (g_TimerHandle == INVALID_HANDLE && NativeControl && ConfigsExecuted)
-        g_TimerHandle = CreateTimer(CalcDelay(), Medic_Timer, _, TIMER_REPEAT);
+    if (g_TimerHandle1 == INVALID_HANDLE && NativeControl && ConfigsExecuted)
+        g_TimerHandle1 = CreateTimer(CalcDelay1(), Medic_Timer1, _, TIMER_REPEAT);
+    if (g_TimerHandle2 == INVALID_HANDLE && NativeControl && ConfigsExecuted)
+        g_TimerHandle2 = CreateTimer(CalcDelay2(), Medic_Timer2, _, TIMER_REPEAT);
+    if (g_TimerHandle3 == INVALID_HANDLE && NativeControl && ConfigsExecuted)
+        g_TimerHandle3 = CreateTimer(CalcDelay3(), Medic_Timer3, _, TIMER_REPEAT);
 }
 
 public Native_SetUberCharger(Handle:plugin,numParams)
